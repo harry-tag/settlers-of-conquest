@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settlers of Conquest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="setup">
+  <div class="setupcard">
+    <p class="eyebrow">A game of harvest and conquest</p>
+    <h1>Settlers of Conquest</h1>
+    <p class="lede">Settle the island, work its land, and march on your neighbours. Every town and army camp keeps its own stores, so supply lines matter as much as swords.</p>
+    <div class="opt"><span class="lab">Computer opponents</span>
+      <div class="seg" id="optAI"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3" class="on">3</button></div></div>
+    <div class="opt"><span class="lab">Victory points to win</span>
+      <div class="seg" id="optVP"><button data-v="9">9 · short</button><button data-v="12" class="on">12</button><button data-v="16">16 · long</button></div></div>
+    <div class="opt"><span class="lab">Computer speed</span>
+      <div class="seg" id="optSpd"><button data-v="1.7">Slow</button><button data-v="1" class="on">Normal</button><button data-v="0.35">Fast</button></div></div>
+    <div class="opt"><span class="lab">Mode</span>
+      <div class="seg" id="optTest"><button data-v="0" class="on">Standard game</button><button data-v="1">Test game · edit every rule value live</button></div></div>
+    <button class="primary big" onclick="startGame()">Start settling</button>
+    <details><summary>How to play</summary><div class="rules" id="rules1"></div></details>
+  </div>
+</div>
+
+<div id="game" hidden>
+  <header><div class="brand">Settlers of Conquest</div><div id="players"></div></header>
+  <main>
+    <section id="boardWrap"><svg id="board" xmlns="http://www.w3.org/2000/svg" font-family="Nunito Sans, system-ui, sans-serif"></svg><button id="storesBtn" class="float" onclick="toggleStores()" hidden>Show my stores</button><div id="hint" role="status"></div></section>
+    <aside>
+      <div class="card">
+        <div class="turnrow"><div id="status"></div><div id="round" class="muted"></div></div>
+        <div id="phases" class="phases"></div>
+        <div id="dice" class="dice"></div>
+        <div id="btns" class="row"></div>
+        <div id="pool"></div>
+        <div id="hungry"></div>
+      </div>
+      <div class="card" id="ledgerCard" hidden><h4>My stores</h4><div id="ledger"></div></div>
+      <div class="card"><h4>Selected</h4><div id="sel"></div></div>
+      <div class="card" id="testCard" hidden><h4>Test tools</h4>
+        <div class="row"><button onclick="toggleSettings()">Edit rule values</button><button id="autoBtn" onclick="toggleAuto()">Computer plays my turns</button></div></div>
+      <div class="card grow"><h4>Chronicle</h4><div id="log"></div></div>
+      <div class="card"><details><summary>How to play</summary><div class="rules" id="rules2"></div></details>
+        <div class="row" style="margin-top:8px"><button onclick="askNew()">New game</button></div></div>
+    </aside>
+  </main>
+</div>
+<div id="settings" hidden></div>
+<div id="modalBg" hidden><div id="modal" role="dialog" aria-modal="true"></div></div>
+
+<script src="js/config.js"></script>
+<script src="js/board.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script>
+const RULES = `
+<p><b>Goal.</b> Reach the victory point target, or be the last one standing. Each townsperson is 1 point; every 4 hexes your soldiers hold is 1 more.</p>
+<p><b>Settling.</b> Players take turns founding two towns on hex corners, each with a small garrison on a neighbouring hex. A town cannot sit next to another town, or on a corner pinched between two mountain ridges.</p>
+<p><b>Your turn.</b> Roll, act, then run supplies. Everyone eats when the turn ends.</p>
+<ul>
+<li><b>Roll.</b> Every hex showing the number pays out. A town harvests each hex it touches (more townspeople, more yield). A camp of soldiers harvests the hex it stands on (bigger camp, more yield). An enemy army standing on a hex blocks your towns from working it. A 7 brings raiders, who halve any large unwalled stockpile.</li>
+<li><b>Wild land.</b> A hex nobody holds still piles up goods at half a camp's rate, or three quarters once someone has held it. A town gathers the piles on the hexes it touches by itself; anywhere else, whoever marches in next takes them.</li>
+<li><b>Supply lines.</b> A camp next to one of your towns, or on a hex whose road leads back to one, shares that town's stores: its harvest goes straight there and it spends from them. Other camps keep and spend their own stock. Towns of yours joined by road pool everything into one shared store. Use "Show my stores" to see it all at once.</li>
+<li><b>Towns</b> grow, train soldiers, raise walls, lay roads and trade at the market. <b>Camps</b> lay roads and found new towns.</li>
+<li><b>March.</b> Soldiers move 3 hexes a turn; moving between two hexes that both touch a road costs half. Marching beyond your supply lines, you choose what to pack.</li>
+<li><b>Food.</b> Soldiers on fields or pasture feed themselves. Anywhere else each camp eats wheat or wool from its stores (or its town's) every turn. A town eats half as much per head, and nothing at all if fields or pasture lie next to it or along its roads. Each unfed turn drains a third of the hunger bar; below half, soldiers and townspeople start to starve.</li>
+<li><b>Attack</b> a neighbouring camp, or besiege a town from a hex that touches it. Dice work like Risk: highest against highest, ties to the defender. A town defends with its militia, which recovers every turn.</li>
+<li><b>Plunder.</b> Take a camp or town and you take everything stored there. The loser may <b>scorch the earth</b> first, burning a random share, but then cannot counter-attack that place on their next turn.</li>
+<li><b>Supply phase.</b> Each town or remote camp may send one convoy to another within 2 hexes (4 along roads).</li>
+</ul>
+<p><b>Terrain.</b></p>
+<ul>
+<li><b>Mountains</b> (ore): ridges on some sides cannot be crossed or built on. Defenders fight better. Towns gain a stone keep.</li>
+<li><b>Forest</b> (wood): slow to enter, and attackers roll fewer dice. Towns gain a palisade.</li>
+<li><b>Hills</b> (brick): defenders roll an extra die. Towns build walls and roads with less brick.</li>
+<li><b>Fields</b> (wheat): farmland. Open ground favours the attacker. Towns can grow larger.</li>
+<li><b>Pasture</b> (wool): farmland. Armies and convoys travel further.</li>
+<li><b>Desert</b>: no harvest, and armies wither. Barbarian camps guard loot.</li>
+<li><b>Coast</b>: towns on the shore get a harbor with better market rates.</li>
+</ul>`;
+document.getElementById('rules1').innerHTML = RULES; document.getElementById('rules2').innerHTML = RULES;
+</script>
+</body>
+</html>
